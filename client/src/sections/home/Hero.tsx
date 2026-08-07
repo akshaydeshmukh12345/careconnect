@@ -5,8 +5,8 @@ import Stats from "../../components/home/Stats";
 const Hero = () => {
   return (
     <section className="bg-slate-50">
-      <div className="mx-auto flex max-w-7xl flex-col items-center gap-16 px-6 py-12 lg:min-h-[85vh] lg:flex-row">
-        
+      <div className="mx-auto flex min-h-[90vh] max-w-7xl flex-col items-center gap-20 px-6 py-16 lg:flex-row">
+
         {/* Left Side */}
         <div className="flex-1">
           <span className="rounded-full bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-700">
@@ -36,7 +36,7 @@ const Hero = () => {
             </button>
           </div>
 
-          <div className="mt-16">
+          <div className="mt-12">
             <Stats />
           </div>
         </div>
