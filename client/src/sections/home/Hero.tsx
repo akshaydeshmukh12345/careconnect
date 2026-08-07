@@ -4,12 +4,11 @@ import Stats from "../../components/home/Stats";
 
 const Hero = () => {
   return (
-    <section className="bg-slate-50 pb-8">
-      <div className="mx-auto flex min-h-[80vh] max-w-7xl flex-col items-center justify-between gap-16 px-6 py-16 lg:flex-row">
-
+    <section className="bg-slate-50">
+      <div className="mx-auto flex max-w-7xl flex-col items-center gap-16 px-6 py-12 lg:min-h-[85vh] lg:flex-row">
+        
         {/* Left Side */}
         <div className="flex-1">
-
           <span className="rounded-full bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-700">
             Trusted Healthcare Platform
           </span>
@@ -37,10 +36,9 @@ const Hero = () => {
             </button>
           </div>
 
-          <div className="mt-12">
+          <div className="mt-16">
             <Stats />
           </div>
-
         </div>
 
         {/* Right Side */}
