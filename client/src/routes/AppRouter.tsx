@@ -14,17 +14,18 @@ const AppRouter = () => {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Main Layout */}
         <Route element={<MainLayout />}>
           <Route path="/" element={<Home />} />
           <Route path="/doctors" element={<Doctors />} />
           <Route path="/appointments" element={<Appointments />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+
+          {/* 404 */}
+          <Route path="*" element={<NotFound />} />
         </Route>
-
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-
-        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );
