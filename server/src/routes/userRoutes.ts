@@ -1,14 +1,16 @@
 import { Router } from "express";
-import { protect, AuthRequest } from "../middleware/authMiddleware";
+import {
+  getProfile,
+  updateProfile,
+} from "../controllers/userController";
+import { protect } from "../middleware/authMiddleware";
 
 const router = Router();
 
-router.get("/profile", protect, (req: AuthRequest, res) => {
-  res.json({
-    success: true,
-    message: "Protected profile route accessed successfully",
-    user: req.user,
-  });
-});
+// Get logged-in user's profile
+router.get("/profile", protect, getProfile);
+
+// Update logged-in user's profile
+router.patch("/profile", protect, updateProfile);
 
 export default router;

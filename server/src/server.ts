@@ -1,13 +1,11 @@
-import userRoutes from "./routes/userRoutes";
-
-import doctorRoutes from "./routes/doctorRoutes";
-
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+
 import connectDB from "./config/db";
 import authRoutes from "./routes/authRoutes";
-
+import userRoutes from "./routes/userRoutes";
+import doctorRoutes from "./routes/doctorRoutes";
 import appointmentRoutes from "./routes/appointmentRoutes";
 
 dotenv.config();
@@ -15,17 +13,34 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
-app.use(cors());
+// =========================
+// CORS
+// =========================
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  })
+);
+
+// =========================
+// BODY PARSER
+// =========================
 app.use(express.json());
 
-// Routes
+// =========================
+// ROUTES
+// =========================
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/doctors", doctorRoutes);
 app.use("/api/appointments", appointmentRoutes);
 
-// Test route
+// =========================
+// TEST ROUTE
+// =========================
 app.get("/", (_req, res) => {
   res.json({
     success: true,
@@ -33,13 +48,17 @@ app.get("/", (_req, res) => {
   });
 });
 
-// Start server
+// =========================
+// START SERVER
+// =========================
 const startServer = async () => {
   try {
     await connectDB();
 
     app.listen(PORT, () => {
-      console.log(`CareConnect server running on port ${PORT}`);
+      console.log(
+        `CareConnect server running on port ${PORT}`
+      );
     });
   } catch (error) {
     console.error("Server startup failed:", error);
