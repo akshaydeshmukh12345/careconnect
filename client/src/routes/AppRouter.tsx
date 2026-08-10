@@ -1,5 +1,3 @@
-import Settings from "../pages/Settings/Settings";
-
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import MainLayout from "../layouts/MainLayout";
@@ -11,23 +9,40 @@ import Register from "../pages/Register/Register";
 import Doctors from "../pages/Doctors/Doctors";
 import Appointments from "../pages/Appointments/Appointments";
 import Profile from "../pages/Profile/Profile";
+import Settings from "../pages/Settings/Settings";
+import DoctorDashboard from "../pages/DoctorDashboard/DoctorDashboard";
 import NotFound from "../pages/NotFound/NotFound";
 
 const AppRouter = () => {
   return (
     <BrowserRouter>
       <Routes>
-
-        {/* Public routes */}
+        {/* =========================
+            MAIN LAYOUT
+        ========================= */}
         <Route element={<MainLayout />}>
+
+          {/* =========================
+              PUBLIC ROUTES
+          ========================= */}
+
           <Route path="/" element={<Home />} />
-          <Route path="/doctors" element={<Doctors />} />
 
           <Route path="/login" element={<Login />} />
+
           <Route path="/register" element={<Register />} />
 
-          {/* Protected routes */}
+          <Route path="/doctors" element={<Doctors />} />
+
+
+          {/* =========================
+              PROTECTED ROUTES
+          ========================= */}
+
           <Route element={<ProtectedRoute />}>
+
+            {/* Patient / common routes */}
+
             <Route
               path="/appointments"
               element={<Appointments />}
@@ -42,12 +57,30 @@ const AppRouter = () => {
               path="/settings"
               element={<Settings />}
             />
+
+
+            {/* =========================
+                DOCTOR DASHBOARD
+            ========================= */}
+
+            <Route
+              path="/doctor-dashboard"
+              element={<DoctorDashboard />}
+            />
+
           </Route>
 
-          {/* 404 */}
-          <Route path="*" element={<NotFound />} />
-        </Route>
 
+          {/* =========================
+              404
+          ========================= */}
+
+          <Route
+            path="*"
+            element={<NotFound />}
+          />
+
+        </Route>
       </Routes>
     </BrowserRouter>
   );

@@ -1,6 +1,7 @@
 import mongoose, { Document, Schema } from "mongoose";
 
 export interface IDoctor extends Document {
+  user: mongoose.Types.ObjectId;
   name: string;
   specialization: string;
   experience: number;
@@ -13,8 +14,16 @@ export interface IDoctor extends Document {
   updatedAt: Date;
 }
 
-const doctorSchema = new Schema<IDoctor>(
+const doctorSchema = new Schema(
   {
+    // Connected login account
+    user: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      unique: true,
+    },
+
     name: {
       type: String,
       required: true,
@@ -68,6 +77,9 @@ const doctorSchema = new Schema<IDoctor>(
   }
 );
 
-const Doctor = mongoose.model<IDoctor>("Doctor", doctorSchema);
+const Doctor = mongoose.model<IDoctor>(
+  "Doctor",
+  doctorSchema
+);
 
 export default Doctor;

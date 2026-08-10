@@ -5,6 +5,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
+    "create-doctor-account": "tsx src/scripts/createDoctorAccount.ts",
     "build": "tsc",
     "start": "node dist/server.js"
   },
