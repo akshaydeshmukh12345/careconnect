@@ -44,3 +44,94 @@ export const createAppointment = async (
     });
   }
 };
+
+export const getMyAppointments = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
+    const appointments = await Appointment.find({
+      patient: req.user.id,
+    })
+      .populate(
+        "doctor",
+        "name specialization experience qualification consultationFee"
+      )
+      .sort({ appointmentDate: 1 });
+
+    return res.status(200).json({
+      success: true,
+      count: appointments.length,
+      appointments,
+    });
+  } catch (error) {
+    console.error("Get my appointments error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
+export const cancelAppointment = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
+    const { id } = req.params;
+
+    // Find appointment belonging to the logged-in patient
+    const appointment = await Appointment.findOne({
+      _id: id,
+      patient: req.user.id,
+    });
+
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: "Appointment not found",
+      });
+    }
+
+    // Only pending appointments can be cancelled
+    if (appointment.status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        message: `Appointment cannot be cancelled because it is already ${appointment.status}`,
+      });
+    }
+
+    // Cancel appointment
+    appointment.status = "cancelled";
+
+    await appointment.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Appointment cancelled successfully",
+      appointment,
+    });
+  } catch (error) {
+    console.error("Cancel appointment error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
