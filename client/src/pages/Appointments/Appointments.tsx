@@ -21,7 +21,10 @@ const Appointments = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [reschedulingId, setReschedulingId] = useState<string | null>(null);
+  const [newDate, setNewDate] = useState("");
 
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -98,7 +101,6 @@ const Appointments = () => {
         return;
       }
 
-      // Update appointment status immediately
       setAppointments((currentAppointments) =>
         currentAppointments.map((appointment) =>
           appointment._id === appointmentId
@@ -117,6 +119,86 @@ const Appointments = () => {
     }
   };
 
+  const openReschedule = (appointment: Appointment) => {
+    const currentDate = new Date(appointment.appointmentDate);
+
+    // Convert existing appointment date to datetime-local format
+    const formattedDate = new Date(
+      currentDate.getTime() - currentDate.getTimezoneOffset() * 60000
+    )
+      .toISOString()
+      .slice(0, 16);
+
+    setNewDate(formattedDate);
+    setReschedulingId(appointment._id);
+    setError("");
+  };
+
+  const handleReschedule = async () => {
+    if (!reschedulingId || !newDate) {
+      setError("Please select a new date and time.");
+      return;
+    }
+
+    const selectedDate = new Date(newDate);
+
+    if (selectedDate <= new Date()) {
+      setError("Please select a future date and time.");
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        setError("Please login again.");
+        return;
+      }
+
+      setError("");
+
+      const response = await fetch(
+        `http://localhost:5000/api/appointments/${reschedulingId}/reschedule`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            appointmentDate: newDate,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        setError(data.message || "Failed to reschedule appointment");
+        return;
+      }
+
+      setAppointments((currentAppointments) =>
+        currentAppointments.map((appointment) =>
+          appointment._id === reschedulingId
+            ? {
+                ...appointment,
+                appointmentDate: data.appointment.appointmentDate,
+              }
+            : appointment
+        )
+      );
+
+      setReschedulingId(null);
+      setNewDate("");
+
+      alert("Appointment rescheduled successfully!");
+    } catch (error) {
+      console.error("Reschedule appointment error:", error);
+      setError("Failed to connect to server");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-12 sm:px-6">
       <div className="mx-auto max-w-6xl">
@@ -132,19 +214,19 @@ const Appointments = () => {
           </p>
         </div>
 
+        {/* Error */}
+        {error && (
+          <div className="mb-6 rounded-xl bg-red-50 p-5 text-red-600">
+            {error}
+          </div>
+        )}
+
         {/* Loading */}
         {loading && (
           <div className="rounded-xl bg-white p-8 text-center shadow-sm">
             <p className="text-slate-500">
               Loading appointments...
             </p>
-          </div>
-        )}
-
-        {/* Error */}
-        {!loading && error && (
-          <div className="mb-6 rounded-xl bg-red-50 p-5 text-red-600">
-            {error}
           </div>
         )}
 
@@ -245,20 +327,31 @@ const Appointments = () => {
 
                 </div>
 
-                {/* Cancel Button */}
+                {/* Actions */}
                 {appointment.status === "pending" && (
-                  <button
-                    onClick={() => handleCancel(appointment._id)}
-                    disabled={cancellingId === appointment._id}
-                    className="mt-6 w-full rounded-lg bg-red-500 px-5 py-3 font-medium text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {cancellingId === appointment._id
-                      ? "Cancelling..."
-                      : "Cancel Appointment"}
-                  </button>
+                  <div className="mt-6 flex gap-3">
+
+                    <button
+                      onClick={() => openReschedule(appointment)}
+                      className="flex-1 rounded-lg border border-blue-600 px-4 py-3 font-medium text-blue-600 transition hover:bg-blue-50"
+                    >
+                      Reschedule
+                    </button>
+
+                    <button
+                      onClick={() => handleCancel(appointment._id)}
+                      disabled={cancellingId === appointment._id}
+                      className="flex-1 rounded-lg bg-red-500 px-4 py-3 font-medium text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {cancellingId === appointment._id
+                        ? "Cancelling..."
+                        : "Cancel"}
+                    </button>
+
+                  </div>
                 )}
 
-                {/* Cancelled message */}
+                {/* Cancelled */}
                 {appointment.status === "cancelled" && (
                   <div className="mt-6 rounded-lg bg-red-50 px-4 py-3 text-center text-sm font-medium text-red-600">
                     This appointment has been cancelled.
@@ -270,6 +363,61 @@ const Appointments = () => {
 
           </div>
         )}
+
+        {/* Reschedule Modal */}
+        {reschedulingId && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+
+              <h2 className="text-2xl font-bold text-slate-900">
+                Reschedule Appointment
+              </h2>
+
+              <p className="mt-2 text-slate-500">
+                Select a new date and time for your appointment.
+              </p>
+
+              <div className="mt-6">
+                <label className="mb-2 block font-medium text-slate-700">
+                  New Date & Time
+                </label>
+
+                <input
+                  type="datetime-local"
+                  value={newDate}
+                  onChange={(e) => setNewDate(e.target.value)}
+                  min={new Date().toISOString().slice(0, 16)}
+                  className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-600"
+                />
+              </div>
+
+              <div className="mt-6 flex gap-3">
+
+                <button
+                  onClick={() => {
+                    setReschedulingId(null);
+                    setNewDate("");
+                    setError("");
+                  }}
+                  className="flex-1 rounded-lg border border-slate-300 px-4 py-3 font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  onClick={handleReschedule}
+                  className="flex-1 rounded-lg bg-blue-600 px-4 py-3 font-medium text-white hover:bg-blue-700"
+                >
+                  Confirm
+                </button>
+
+              </div>
+
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

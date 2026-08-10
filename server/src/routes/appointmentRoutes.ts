@@ -3,6 +3,7 @@ import {
   createAppointment,
   getMyAppointments,
   cancelAppointment,
+  rescheduleAppointment,
 } from "../controllers/appointmentController";
 import { protect } from "../middleware/authMiddleware";
 
@@ -16,5 +17,8 @@ router.get("/my", protect, getMyAppointments);
 
 // Cancel appointment
 router.patch("/:id/cancel", protect, cancelAppointment);
+
+// Reschedule appointment
+router.patch("/:id/reschedule", protect, rescheduleAppointment);
 
 export default router;
