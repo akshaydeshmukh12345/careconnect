@@ -1,16 +1,42 @@
 import { Router } from "express";
+
 import {
   getProfile,
   updateProfile,
+  getHealthProfile,
+  updateHealthProfile,
 } from "../controllers/userController";
+
 import { protect } from "../middleware/authMiddleware";
 
 const router = Router();
 
-// Get logged-in user's profile
-router.get("/profile", protect, getProfile);
+// USER PROFILE
 
-// Update logged-in user's profile
-router.patch("/profile", protect, updateProfile);
+router.get(
+  "/profile",
+  protect,
+  getProfile
+);
+
+router.patch(
+  "/profile",
+  protect,
+  updateProfile
+);
+
+// HEALTH PROFILE
+
+router.get(
+  "/health-profile",
+  protect,
+  getHealthProfile
+);
+
+router.put(
+  "/health-profile",
+  protect,
+  updateHealthProfile
+);
 
 export default router;

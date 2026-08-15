@@ -11,29 +11,44 @@ import Appointments from "../pages/Appointments/Appointments";
 import Profile from "../pages/Profile/Profile";
 import Settings from "../pages/Settings/Settings";
 import DoctorDashboard from "../pages/DoctorDashboard/DoctorDashboard";
+import AIWellness from "../pages/AIWellness/AIWellness";
+import HealthProfile from "../pages/HealthProfile/HealthProfile";
 import NotFound from "../pages/NotFound/NotFound";
 
 const AppRouter = () => {
   return (
     <BrowserRouter>
       <Routes>
+
         {/* =========================
             MAIN LAYOUT
         ========================= */}
+
         <Route element={<MainLayout />}>
 
           {/* =========================
               PUBLIC ROUTES
           ========================= */}
 
-          <Route path="/" element={<Home />} />
+          <Route
+            path="/"
+            element={<Home />}
+          />
 
-          <Route path="/login" element={<Login />} />
+          <Route
+            path="/login"
+            element={<Login />}
+          />
 
-          <Route path="/register" element={<Register />} />
+          <Route
+            path="/register"
+            element={<Register />}
+          />
 
-          <Route path="/doctors" element={<Doctors />} />
-
+          <Route
+            path="/doctors"
+            element={<Doctors />}
+          />
 
           {/* =========================
               PROTECTED ROUTES
@@ -41,7 +56,7 @@ const AppRouter = () => {
 
           <Route element={<ProtectedRoute />}>
 
-            {/* Patient / common routes */}
+            {/* Patient / Common */}
 
             <Route
               path="/appointments"
@@ -58,10 +73,21 @@ const AppRouter = () => {
               element={<Settings />}
             />
 
+            {/* Health Profile */}
 
-            {/* =========================
-                DOCTOR DASHBOARD
-            ========================= */}
+            <Route
+              path="/health-profile"
+              element={<HealthProfile />}
+            />
+
+            {/* AI Wellness */}
+
+            <Route
+              path="/ai-wellness"
+              element={<AIWellness />}
+            />
+
+            {/* Doctor Dashboard */}
 
             <Route
               path="/doctor-dashboard"
@@ -69,7 +95,6 @@ const AppRouter = () => {
             />
 
           </Route>
-
 
           {/* =========================
               404
@@ -81,6 +106,7 @@ const AppRouter = () => {
           />
 
         </Route>
+
       </Routes>
     </BrowserRouter>
   );

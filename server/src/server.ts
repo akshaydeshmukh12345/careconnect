@@ -1,3 +1,4 @@
+import aiRoutes from "./routes/aiRoutes";
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -37,6 +38,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/doctors", doctorRoutes);
 app.use("/api/appointments", appointmentRoutes);
+app.use("/api/ai", aiRoutes);
 
 // =========================
 // TEST ROUTE

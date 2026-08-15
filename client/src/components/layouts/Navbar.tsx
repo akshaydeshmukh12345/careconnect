@@ -24,12 +24,19 @@ const Navbar = () => {
       <div className="mx-auto flex min-h-[76px] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
 
         {/* Logo */}
-        <Link to="/" onClick={closeMobileMenu} className="shrink-0">
+        <Link
+          to="/"
+          onClick={closeMobileMenu}
+          className="shrink-0"
+        >
           <Logo />
         </Link>
 
-        {/* Desktop Navigation */}
+        {/* =========================
+            DESKTOP NAVIGATION
+        ========================= */}
         <nav className="hidden items-center gap-6 lg:flex">
+
           <Link
             to="/"
             className="whitespace-nowrap font-medium text-slate-700 transition hover:text-blue-600"
@@ -59,10 +66,23 @@ const Navbar = () => {
               Profile
             </Link>
           )}
+
+          {/* AI WELLNESS */}
+          {isAuthenticated && (
+            <Link
+              to="/ai-wellness"
+              className="flex items-center gap-1 whitespace-nowrap font-semibold text-blue-600 transition hover:text-blue-700"
+            >
+              🤖 CareConnect AI
+            </Link>
+          )}
         </nav>
 
-        {/* Desktop Auth */}
+        {/* =========================
+            DESKTOP AUTH
+        ========================= */}
         <div className="hidden items-center gap-2 xl:flex">
+
           {isAuthenticated ? (
             <>
               <span className="max-w-[140px] truncate text-sm text-slate-600">
@@ -100,12 +120,23 @@ const Navbar = () => {
               </button>
             </>
           )}
+
         </div>
 
-        {/* Tablet Auth */}
+        {/* =========================
+            TABLET AUTH
+        ========================= */}
         <div className="hidden items-center gap-2 md:flex xl:hidden">
+
           {isAuthenticated ? (
             <>
+              <button
+                onClick={() => navigate("/ai-wellness")}
+                className="rounded-lg border border-blue-200 px-3 py-2 font-medium text-blue-600 transition hover:bg-blue-50"
+              >
+                🤖 AI
+              </button>
+
               <button
                 onClick={() => navigate("/settings")}
                 className="rounded-lg border border-slate-300 px-3 py-2 font-medium text-slate-700 hover:bg-slate-100"
@@ -137,9 +168,12 @@ const Navbar = () => {
               </button>
             </>
           )}
+
         </div>
 
-        {/* Mobile Menu Button */}
+        {/* =========================
+            MOBILE MENU BUTTON
+        ========================= */}
         <button
           type="button"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -150,7 +184,9 @@ const Navbar = () => {
         </button>
       </div>
 
-      {/* Mobile Menu */}
+      {/* =========================
+          MOBILE MENU
+      ========================= */}
       {mobileMenuOpen && (
         <div className="border-t border-slate-200 bg-white px-4 py-4 md:hidden">
 
@@ -161,7 +197,7 @@ const Navbar = () => {
               onClick={closeMobileMenu}
               className="rounded-lg px-4 py-3 font-medium text-slate-700 hover:bg-slate-100"
             >
-              Home
+              🏠 Home
             </Link>
 
             <Link
@@ -169,7 +205,7 @@ const Navbar = () => {
               onClick={closeMobileMenu}
               className="rounded-lg px-4 py-3 font-medium text-slate-700 hover:bg-slate-100"
             >
-              Doctors
+              👨‍⚕️ Doctors
             </Link>
 
             <Link
@@ -177,17 +213,28 @@ const Navbar = () => {
               onClick={closeMobileMenu}
               className="rounded-lg px-4 py-3 font-medium text-slate-700 hover:bg-slate-100"
             >
-              Appointments
+              📅 Appointments
             </Link>
 
             {isAuthenticated && (
-              <Link
-                to="/profile"
-                onClick={closeMobileMenu}
-                className="rounded-lg px-4 py-3 font-medium text-slate-700 hover:bg-slate-100"
-              >
-                Profile
-              </Link>
+              <>
+                <Link
+                  to="/profile"
+                  onClick={closeMobileMenu}
+                  className="rounded-lg px-4 py-3 font-medium text-slate-700 hover:bg-slate-100"
+                >
+                  👤 Profile
+                </Link>
+
+                {/* AI SHORTCUT */}
+                <Link
+                  to="/ai-wellness"
+                  onClick={closeMobileMenu}
+                  className="rounded-lg bg-blue-50 px-4 py-3 font-semibold text-blue-600 hover:bg-blue-100"
+                >
+                  🤖 CareConnect AI
+                </Link>
+              </>
             )}
 
             {isAuthenticated ? (
@@ -205,14 +252,14 @@ const Navbar = () => {
                   }}
                   className="rounded-lg px-4 py-3 text-left font-medium text-slate-700 hover:bg-slate-100"
                 >
-                  Settings
+                  ⚙️ Settings
                 </button>
 
                 <button
                   onClick={handleLogout}
                   className="mt-1 rounded-lg bg-red-500 px-4 py-3 text-left font-medium text-white hover:bg-red-600"
                 >
-                  Logout
+                  🚪 Logout
                 </button>
               </>
             ) : (
@@ -240,6 +287,7 @@ const Navbar = () => {
                 </button>
               </>
             )}
+
           </nav>
         </div>
       )}
