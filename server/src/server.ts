@@ -1,13 +1,15 @@
-import aiRoutes from "./routes/aiRoutes";
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 
 import connectDB from "./config/db";
+
 import authRoutes from "./routes/authRoutes";
 import userRoutes from "./routes/userRoutes";
 import doctorRoutes from "./routes/doctorRoutes";
 import appointmentRoutes from "./routes/appointmentRoutes";
+import aiRoutes from "./routes/aiRoutes";
+import adminRoutes from "./routes/adminRoutes";
 
 dotenv.config();
 
@@ -17,6 +19,7 @@ const PORT = process.env.PORT || 5000;
 // =========================
 // CORS
 // =========================
+
 app.use(
   cors({
     origin: "http://localhost:5173",
@@ -29,22 +32,31 @@ app.use(
 // =========================
 // BODY PARSER
 // =========================
+
 app.use(express.json());
 
 // =========================
 // ROUTES
 // =========================
+
 app.use("/api/auth", authRoutes);
+
 app.use("/api/users", userRoutes);
+
 app.use("/api/doctors", doctorRoutes);
+
 app.use("/api/appointments", appointmentRoutes);
+
 app.use("/api/ai", aiRoutes);
+
+app.use("/api/admin", adminRoutes);
 
 // =========================
 // TEST ROUTE
 // =========================
+
 app.get("/", (_req, res) => {
-  res.json({
+  res.status(200).json({
     success: true,
     message: "CareConnect API is running",
   });
@@ -53,6 +65,7 @@ app.get("/", (_req, res) => {
 // =========================
 // START SERVER
 // =========================
+
 const startServer = async () => {
   try {
     await connectDB();

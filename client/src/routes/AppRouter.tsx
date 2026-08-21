@@ -1,3 +1,5 @@
+import AdminRoute from "./AdminRoute";
+import AdminDashboard from "../pages/AdminDashboard/AdminDashboard";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import MainLayout from "../layouts/MainLayout";
@@ -19,6 +21,13 @@ const AppRouter = () => {
   return (
     <BrowserRouter>
       <Routes>
+
+        <Route element={<AdminRoute />}>
+  <Route
+    path="/admin/dashboard"
+    element={<AdminDashboard />}
+  />
+</Route>
 
         {/* =========================
             MAIN LAYOUT
