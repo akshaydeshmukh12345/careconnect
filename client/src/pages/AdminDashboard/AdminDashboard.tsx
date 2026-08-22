@@ -28,7 +28,7 @@ const AdminDashboard = () => {
         }
 
         const response = await fetch(
-          "http://localhost:5000/api/admin/stats",
+          "https://careconnect-1-chxq.onrender.com/api/admin/stats",
           {
             method: "GET",
             headers: {

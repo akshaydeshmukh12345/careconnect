@@ -48,7 +48,7 @@ const Doctors = () => {
         setError("");
 
         const response = await fetch(
-          "http://localhost:5000/api/doctors"
+          "https://careconnect-1-chxq.onrender.com/api/doctors"
         );
 
         if (!response.ok) {
@@ -146,7 +146,7 @@ const Doctors = () => {
       setBooking(true);
 
       const response = await fetch(
-        "http://localhost:5000/api/appointments",
+        "https://careconnect-1-chxq.onrender.com/api/appointments",
         {
           method: "POST",
           headers: {

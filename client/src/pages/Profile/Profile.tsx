@@ -42,7 +42,7 @@ const Profile = () => {
         }
 
         const response = await fetch(
-          "http://localhost:5000/api/users/profile",
+          "https://careconnect-1-chxq.onrender.com/api/users/profile",
           {
             method: "GET",
             headers: {
@@ -136,7 +136,7 @@ const Profile = () => {
       console.log("Phone:", phone);
 
       const response = await fetch(
-        "http://localhost:5000/api/users/profile",
+        "https://careconnect-1-chxq.onrender.com/api/users/profile",
         {
           method: "PATCH",
           headers: {

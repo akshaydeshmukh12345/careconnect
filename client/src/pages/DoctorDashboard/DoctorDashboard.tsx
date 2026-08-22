@@ -73,7 +73,7 @@ const DoctorDashboard = () => {
         }
 
         const response = await fetch(
-          "http://localhost:5000/api/doctors/dashboard",
+          "https://careconnect-1-chxq.onrender.com/api/doctors/dashboard",
           {
             method: "GET",
             headers: {

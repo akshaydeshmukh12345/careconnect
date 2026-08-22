@@ -37,7 +37,7 @@ const Appointments = () => {
         }
 
         const response = await fetch(
-          "http://localhost:5000/api/appointments/my",
+          "https://careconnect-1-chxq.onrender.com/api/appointments/my",
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -85,7 +85,7 @@ const Appointments = () => {
       setError("");
 
       const response = await fetch(
-        `http://localhost:5000/api/appointments/${appointmentId}/cancel`,
+        `https://careconnect-1-chxq.onrender.com/api/appointments/${appointmentId}/cancel`,
         {
           method: "PATCH",
           headers: {
@@ -158,7 +158,7 @@ const Appointments = () => {
       setError("");
 
       const response = await fetch(
-        `http://localhost:5000/api/appointments/${reschedulingId}/reschedule`,
+        `https://careconnect-1-chxq.onrender.com/api/appointments/${reschedulingId}/reschedule`,
         {
           method: "PATCH",
           headers: {

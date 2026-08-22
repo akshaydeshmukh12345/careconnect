@@ -21,7 +21,7 @@ interface HealthProfileData {
   medicalConditions: string[];
 }
 
-const API_URL = "http://localhost:5000";
+const API_URL = "https://careconnect-1-chxq.onrender.com";
 
 const conditions = [
   "None",

@@ -35,7 +35,7 @@ const Register = () => {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/auth/register",
+        "https://careconnect-1-chxq.onrender.com/api/auth/register",
         {
           method: "POST",
           headers: {
