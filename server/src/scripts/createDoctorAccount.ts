@@ -19,15 +19,26 @@ const createDoctorAccount = async () => {
 
     if (!doctor) {
       console.log("Doctor Dr. Rahul Sharma not found.");
+      await mongoose.connection.close();
       process.exit(1);
     }
 
     console.log("Doctor found:", doctor.name);
     console.log("Doctor ID:", doctor._id.toString());
 
+    // Make sure doctor has an email
+    if (!doctor.email) {
+      console.log("WARNING: Doctor email is missing.");
+      await mongoose.connection.close();
+      process.exit(1);
+    }
+
+    // Store email after validation
+    const doctorEmail = doctor.email;
+
     // Check whether a User already exists with doctor's email
     let user = await User.findOne({
-      email: doctor.email.toLowerCase(),
+      email: doctorEmail.toLowerCase(),
     });
 
     // If user doesn't exist, create doctor user
@@ -41,7 +52,7 @@ const createDoctorAccount = async () => {
 
       user = await User.create({
         name: doctor.name,
-        email: doctor.email.toLowerCase(),
+        email: doctorEmail.toLowerCase(),
         password: hashedPassword,
         phone: doctor.phone,
         role: "doctor",
@@ -77,12 +88,6 @@ const createDoctorAccount = async () => {
     console.log("Doctor ID:", doctor._id.toString());
     console.log("User ID:", user._id.toString());
     console.log("Email:", user.email);
-
-    if (!doctor.email) {
-      console.log(
-        "WARNING: Doctor email is missing."
-      );
-    }
 
     console.log("=================================");
     console.log("Login credentials for local testing:");
