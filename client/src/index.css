@@ -1,1 +1,11 @@
 @import "tailwindcss";
+
+/* Hide horizontal scrollbar for doctor category filters */
+.category-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.category-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
