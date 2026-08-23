@@ -35,6 +35,11 @@ interface Statistics {
   cancelled: number;
 }
 
+const API_BASE_URL = (
+  import.meta.env.VITE_API_URL ||
+  "http://localhost:5000/api"
+).replace(/\/+$/, "");
+
 const DoctorDashboard = () => {
   const [doctor, setDoctor] =
     useState<Doctor | null>(null);
@@ -54,94 +59,269 @@ const DoctorDashboard = () => {
   const [loading, setLoading] =
     useState(true);
 
+  const [updatingId, setUpdatingId] =
+    useState<string | null>(null);
+
   const [error, setError] =
     useState("");
 
-  useEffect(() => {
-    const fetchDashboard = async () => {
-      try {
-        setLoading(true);
-        setError("");
+  const [success, setSuccess] =
+    useState("");
 
-        const token =
-          localStorage.getItem("token");
+  // =========================================
+  // GET TOKEN
+  // =========================================
 
-        if (!token) {
-          throw new Error(
-            "Please login as a doctor."
-          );
-        }
+  const getToken = () => {
+    return localStorage.getItem("token");
+  };
 
-        const response = await fetch(
-          "https://careconnect-1-chxq.onrender.com/api/doctors/dashboard",
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type":
-                "application/json",
-            },
-          }
+  // =========================================
+  // FETCH DOCTOR DASHBOARD
+  // =========================================
+
+  const fetchDashboard = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const token = getToken();
+
+      if (!token) {
+        throw new Error(
+          "Please login as a doctor."
         );
-
-        const contentType =
-          response.headers.get(
-            "content-type"
-          );
-
-        // Prevent JSON parse error when server
-        // accidentally returns HTML
-        if (
-          !contentType?.includes(
-            "application/json"
-          )
-        ) {
-          throw new Error(
-            "Server returned an invalid response. Please check the backend API."
-          );
-        }
-
-        const data =
-          await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            data.message ||
-              "Failed to load doctor dashboard"
-          );
-        }
-
-        setDoctor(data.doctor);
-
-        setStatistics(
-          data.statistics
-        );
-
-        setAppointments(
-          data.appointments || []
-        );
-      } catch (error) {
-        console.error(
-          "Doctor dashboard error:",
-          error
-        );
-
-        setError(
-          error instanceof Error
-            ? error.message
-            : "Unable to load doctor dashboard"
-        );
-      } finally {
-        setLoading(false);
       }
-    };
 
+      const response = await fetch(
+        `${API_BASE_URL}/doctors/dashboard`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type":
+              "application/json",
+          },
+        }
+      );
+
+      const contentType =
+        response.headers.get(
+          "content-type"
+        );
+
+      if (
+        !contentType?.includes(
+          "application/json"
+        )
+      ) {
+        throw new Error(
+          "Server returned an invalid response. Please check the backend API."
+        );
+      }
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+            "Failed to load doctor dashboard"
+        );
+      }
+
+      setDoctor(data.doctor);
+
+      setStatistics(
+        data.statistics || {
+          total: 0,
+          pending: 0,
+          confirmed: 0,
+          completed: 0,
+          cancelled: 0,
+        }
+      );
+
+      setAppointments(
+        data.appointments || []
+      );
+    } catch (error) {
+      console.error(
+        "Doctor dashboard error:",
+        error
+      );
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Unable to load doctor dashboard"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // =========================================
+  // LOAD DASHBOARD
+  // =========================================
+
+  useEffect(() => {
     fetchDashboard();
   }, []);
 
+  // =========================================
+  // UPDATE APPOINTMENT STATUS
+  // =========================================
+
+  const updateAppointmentStatus = async (
+    appointmentId: string,
+    status:
+      | "confirmed"
+      | "cancelled"
+      | "completed"
+  ) => {
+    try {
+      setUpdatingId(appointmentId);
+      setError("");
+      setSuccess("");
+
+      const token = getToken();
+
+      if (!token) {
+        throw new Error(
+          "Please login again."
+        );
+      }
+
+      const response = await fetch(
+        `${API_BASE_URL}/appointments/${appointmentId}/status`,
+        {
+          method: "PATCH",
+
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type":
+              "application/json",
+          },
+
+          body: JSON.stringify({
+            status,
+          }),
+        }
+      );
+
+      const contentType =
+        response.headers.get(
+          "content-type"
+        );
+
+      if (
+        !contentType?.includes(
+          "application/json"
+        )
+      ) {
+        throw new Error(
+          "Server returned an invalid response."
+        );
+      }
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+            "Unable to update appointment"
+        );
+      }
+
+      setSuccess(
+        data.message ||
+          `Appointment ${status} successfully`
+      );
+
+      // Refresh dashboard
+      await fetchDashboard();
+    } catch (error) {
+      console.error(
+        "Update appointment error:",
+        error
+      );
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Unable to update appointment"
+      );
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  // =========================================
+  // CONFIRM APPOINTMENT
+  // =========================================
+
+  const handleConfirm = (
+    appointmentId: string
+  ) => {
+    updateAppointmentStatus(
+      appointmentId,
+      "confirmed"
+    );
+  };
+
+  // =========================================
+  // CANCEL APPOINTMENT
+  // =========================================
+
+  const handleCancel = (
+    appointmentId: string
+  ) => {
+    const confirmed =
+      window.confirm(
+        "Are you sure you want to cancel this appointment?"
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    updateAppointmentStatus(
+      appointmentId,
+      "cancelled"
+    );
+  };
+
+  // =========================================
+  // COMPLETE APPOINTMENT
+  // =========================================
+
+  const handleComplete = (
+    appointmentId: string
+  ) => {
+    const confirmed =
+      window.confirm(
+        "Mark this appointment as completed?"
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    updateAppointmentStatus(
+      appointmentId,
+      "completed"
+    );
+  };
+
+  // =========================================
+  // LOADING
+  // =========================================
+
   if (loading) {
     return (
-      <div className="min-h-[70vh] flex items-center justify-center">
+      <div className="flex min-h-[70vh] items-center justify-center">
         <p className="text-lg text-slate-600">
           Loading doctor dashboard...
         </p>
@@ -149,7 +329,11 @@ const DoctorDashboard = () => {
     );
   }
 
-  if (error) {
+  // =========================================
+  // ERROR
+  // =========================================
+
+  if (error && !doctor) {
     return (
       <div className="mx-auto max-w-6xl px-6 py-10">
         <div className="rounded-xl bg-red-50 p-5 text-red-600">
@@ -159,11 +343,18 @@ const DoctorDashboard = () => {
     );
   }
 
+  // =========================================
+  // DASHBOARD
+  // =========================================
+
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="mx-auto max-w-7xl px-6 py-10">
 
-        {/* Header */}
+        {/* =====================================
+            HEADER
+        ===================================== */}
+
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900">
             Doctor Portal
@@ -175,10 +366,32 @@ const DoctorDashboard = () => {
           </p>
         </div>
 
+        {/* =====================================
+            ERROR MESSAGE
+        ===================================== */}
 
-        {/* Doctor Profile */}
+        {error && (
+          <div className="mb-6 rounded-xl bg-red-50 p-4 text-red-600">
+            {error}
+          </div>
+        )}
+
+        {/* =====================================
+            SUCCESS MESSAGE
+        ===================================== */}
+
+        {success && (
+          <div className="mb-6 rounded-xl bg-green-50 p-4 text-green-600">
+            {success}
+          </div>
+        )}
+
+        {/* =====================================
+            DOCTOR PROFILE
+        ===================================== */}
+
         {doctor && (
-          <div className="mb-8 rounded-2xl bg-white p-6 shadow-sm border border-slate-200">
+          <div className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
 
             <div className="flex items-center gap-5">
 
@@ -208,11 +421,15 @@ const DoctorDashboard = () => {
           </div>
         )}
 
+        {/* =====================================
+            STATISTICS
+        ===================================== */}
 
-        {/* Statistics */}
         <div className="mb-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
 
-          <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-200">
+          {/* Total */}
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <p className="text-sm text-slate-500">
               Total Appointments
             </p>
@@ -222,8 +439,9 @@ const DoctorDashboard = () => {
             </p>
           </div>
 
+          {/* Pending */}
 
-          <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-200">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <p className="text-sm text-slate-500">
               Pending
             </p>
@@ -233,8 +451,9 @@ const DoctorDashboard = () => {
             </p>
           </div>
 
+          {/* Confirmed */}
 
-          <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-200">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <p className="text-sm text-slate-500">
               Confirmed
             </p>
@@ -244,8 +463,9 @@ const DoctorDashboard = () => {
             </p>
           </div>
 
+          {/* Completed */}
 
-          <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-200">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <p className="text-sm text-slate-500">
               Completed
             </p>
@@ -255,8 +475,9 @@ const DoctorDashboard = () => {
             </p>
           </div>
 
+          {/* Cancelled */}
 
-          <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-200">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <p className="text-sm text-slate-500">
               Cancelled
             </p>
@@ -268,11 +489,14 @@ const DoctorDashboard = () => {
 
         </div>
 
+        {/* =====================================
+            PATIENT APPOINTMENTS
+        ===================================== */}
 
-        {/* Appointments */}
-        <div className="rounded-2xl bg-white shadow-sm border border-slate-200">
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
 
           <div className="border-b border-slate-200 p-6">
+
             <h2 className="text-xl font-bold text-slate-900">
               Patient Appointments
             </h2>
@@ -280,8 +504,10 @@ const DoctorDashboard = () => {
             <p className="mt-1 text-sm text-slate-500">
               Appointments booked with you.
             </p>
+
           </div>
 
+          {/* No appointments */}
 
           {appointments.length === 0 ? (
             <div className="p-10 text-center">
@@ -290,89 +516,210 @@ const DoctorDashboard = () => {
               </p>
             </div>
           ) : (
+
             <div className="divide-y divide-slate-200">
 
               {appointments.map(
-                (appointment) => (
-                  <div
-                    key={appointment._id}
-                    className="p-6"
-                  >
+                (appointment) => {
 
-                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  const isUpdating =
+                    updatingId ===
+                    appointment._id;
 
-                      <div>
+                  return (
+                    <div
+                      key={appointment._id}
+                      className="p-6"
+                    >
 
-                        <h3 className="text-lg font-semibold text-slate-900">
-                          {appointment.patient?.name ||
-                            "Unknown Patient"}
-                        </h3>
+                      <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
 
-                        <p className="mt-1 text-sm text-slate-500">
-                          {appointment.patient?.email}
-                        </p>
+                        {/* =================================
+                            PATIENT INFORMATION
+                        ================================= */}
 
-                        {appointment.patient
-                          ?.phone && (
-                          <p className="text-sm text-slate-500">
-                            {
-                              appointment
-                                .patient
-                                .phone
-                            }
+                        <div className="flex-1">
+
+                          <h3 className="text-lg font-semibold text-slate-900">
+                            {appointment.patient
+                              ?.name ||
+                              "Unknown Patient"}
+                          </h3>
+
+                          <p className="mt-1 text-sm text-slate-500">
+                            {appointment.patient
+                              ?.email}
                           </p>
-                        )}
 
-                        <p className="mt-3 text-sm text-slate-700">
-                          <strong>
-                            Appointment:
-                          </strong>{" "}
-                          {new Date(
-                            appointment.appointmentDate
-                          ).toLocaleString()}
-                        </p>
+                          {appointment.patient
+                            ?.phone && (
+                            <p className="text-sm text-slate-500">
+                              {
+                                appointment
+                                  .patient
+                                  .phone
+                              }
+                            </p>
+                          )}
 
-                        {appointment.reason && (
-                          <p className="mt-1 text-sm text-slate-600">
+                          <p className="mt-3 text-sm text-slate-700">
                             <strong>
-                              Reason:
+                              Appointment:
                             </strong>{" "}
-                            {
-                              appointment.reason
-                            }
+                            {new Date(
+                              appointment.appointmentDate
+                            ).toLocaleString()}
                           </p>
-                        )}
 
-                      </div>
+                          {appointment.reason && (
+                            <p className="mt-1 text-sm text-slate-600">
+                              <strong>
+                                Reason:
+                              </strong>{" "}
+                              {
+                                appointment.reason
+                              }
+                            </p>
+                          )}
 
+                        </div>
 
-                      <div>
+                        {/* =================================
+                            STATUS + ACTIONS
+                        ================================= */}
 
-                        <span
-                          className={`inline-flex rounded-full px-4 py-2 text-sm font-semibold capitalize ${
-                            appointment.status ===
-                            "pending"
-                              ? "bg-yellow-100 text-yellow-700"
-                              : appointment.status ===
-                                "confirmed"
-                              ? "bg-blue-100 text-blue-700"
-                              : appointment.status ===
-                                "completed"
-                              ? "bg-green-100 text-green-700"
-                              : "bg-red-100 text-red-700"
-                          }`}
-                        >
-                          {
-                            appointment.status
-                          }
-                        </span>
+                        <div className="flex flex-col items-start gap-4 lg:items-end">
+
+                          {/* STATUS */}
+
+                          <span
+                            className={`inline-flex rounded-full px-4 py-2 text-sm font-semibold capitalize ${
+                              appointment.status ===
+                              "pending"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : appointment.status ===
+                                  "confirmed"
+                                ? "bg-blue-100 text-blue-700"
+                                : appointment.status ===
+                                  "completed"
+                                ? "bg-green-100 text-green-700"
+                                : "bg-red-100 text-red-700"
+                            }`}
+                          >
+                            {appointment.status}
+                          </span>
+
+                          {/* =================================
+                              PENDING ACTIONS
+                          ================================= */}
+
+                          {appointment.status ===
+                            "pending" && (
+                            <div className="flex flex-wrap gap-3">
+
+                              <button
+                                onClick={() =>
+                                  handleConfirm(
+                                    appointment._id
+                                  )
+                                }
+                                disabled={
+                                  isUpdating
+                                }
+                                className="rounded-xl bg-blue-600 px-5 py-2.5 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {isUpdating
+                                  ? "Updating..."
+                                  : "Confirm"}
+                              </button>
+
+                              <button
+                                onClick={() =>
+                                  handleCancel(
+                                    appointment._id
+                                  )
+                                }
+                                disabled={
+                                  isUpdating
+                                }
+                                className="rounded-xl bg-red-500 px-5 py-2.5 font-semibold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                Cancel
+                              </button>
+
+                            </div>
+                          )}
+
+                          {/* =================================
+                              CONFIRMED ACTIONS
+                          ================================= */}
+
+                          {appointment.status ===
+                            "confirmed" && (
+                            <div className="flex flex-wrap gap-3">
+
+                              <button
+                                onClick={() =>
+                                  handleComplete(
+                                    appointment._id
+                                  )
+                                }
+                                disabled={
+                                  isUpdating
+                                }
+                                className="rounded-xl bg-green-600 px-5 py-2.5 font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {isUpdating
+                                  ? "Updating..."
+                                  : "Complete"}
+                              </button>
+
+                              <button
+                                onClick={() =>
+                                  handleCancel(
+                                    appointment._id
+                                  )
+                                }
+                                disabled={
+                                  isUpdating
+                                }
+                                className="rounded-xl bg-red-500 px-5 py-2.5 font-semibold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                Cancel
+                              </button>
+
+                            </div>
+                          )}
+
+                          {/* =================================
+                              COMPLETED
+                          ================================= */}
+
+                          {appointment.status ===
+                            "completed" && (
+                            <p className="text-sm font-semibold text-green-600">
+                              Appointment completed
+                            </p>
+                          )}
+
+                          {/* =================================
+                              CANCELLED
+                          ================================= */}
+
+                          {appointment.status ===
+                            "cancelled" && (
+                            <p className="text-sm font-semibold text-red-600">
+                              Appointment cancelled
+                            </p>
+                          )}
+
+                        </div>
 
                       </div>
 
                     </div>
-
-                  </div>
-                )
+                  );
+                }
               )}
 
             </div>

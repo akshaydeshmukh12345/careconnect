@@ -1,93 +1,141 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
-interface Doctor {
+type Doctor = {
   _id: string;
   name: string;
   specialization: string;
   experience: number;
   qualification: string;
   consultationFee: number;
-}
+  available: boolean;
+};
 
-interface Appointment {
+type Appointment = {
   _id: string;
   appointmentDate: string;
   reason?: string;
-  status: "pending" | "confirmed" | "cancelled" | "completed";
-  doctor: Doctor;
-}
+  status: string;
+  doctor?: {
+    _id: string;
+    name: string;
+    specialization: string;
+    experience: number;
+    qualification: string;
+    consultationFee: number;
+  };
+};
+
+/*
+ * API URL
+ *
+ * Your .env should be:
+ *
+ * VITE_API_URL=http://localhost:5000/api
+ *
+ * This also protects against accidentally adding /api twice.
+ */
+const API_BASE_URL = (
+  import.meta.env.VITE_API_URL || "http://localhost:5000/api"
+).replace(/\/+$/, "");
 
 const Appointments = () => {
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [searchParams] = useSearchParams();
 
-  const [cancellingId, setCancellingId] = useState<string | null>(null);
-  const [reschedulingId, setReschedulingId] = useState<string | null>(null);
-  const [newDate, setNewDate] = useState("");
+  // Doctor ID coming from:
+  // /appointments?doctor=DOCTOR_ID
+  const doctorId = searchParams.get("doctor");
+
+  const [doctor, setDoctor] = useState<Doctor | null>(null);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+
+  const [appointmentDate, setAppointmentDate] = useState("");
+  const [reason, setReason] = useState("");
+
+  const [loadingDoctor, setLoadingDoctor] = useState(false);
+  const [loadingAppointments, setLoadingAppointments] = useState(false);
+  const [booking, setBooking] = useState(false);
+
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  // =========================================
+  // GET TOKEN
+  // =========================================
+
+  const getToken = () => {
+    return localStorage.getItem("token");
+  };
+
+  // =========================================
+  // LOAD SELECTED DOCTOR
+  // =========================================
 
   useEffect(() => {
-    const fetchAppointments = async () => {
-      try {
-        const token = localStorage.getItem("token");
-
-        if (!token) {
-          setError("Please login to view your appointments.");
-          return;
-        }
-
-        const response = await fetch(
-          "https://careconnect-1-chxq.onrender.com/api/appointments/my",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        const data = await response.json();
-
-        if (!response.ok || !data.success) {
-          setError(data.message || "Failed to load appointments");
-          return;
-        }
-
-        setAppointments(data.appointments || []);
-      } catch (error) {
-        console.error("Fetch appointments error:", error);
-        setError("Failed to connect to server");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAppointments();
-  }, []);
-
-  const handleCancel = async (appointmentId: string) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to cancel this appointment?"
-    );
-
-    if (!confirmed) {
+    if (!doctorId) {
+      setDoctor(null);
       return;
     }
 
+    const loadDoctor = async () => {
+      try {
+        setLoadingDoctor(true);
+        setError("");
+
+        const response = await fetch(`${API_BASE_URL}/doctors`);
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.message || "Unable to load doctors"
+          );
+        }
+
+        const foundDoctor = data.doctors?.find(
+          (item: Doctor) => item._id === doctorId
+        );
+
+        if (!foundDoctor) {
+          setError("Doctor not found.");
+          return;
+        }
+
+        setDoctor(foundDoctor);
+      } catch (err) {
+        console.error("Load doctor error:", err);
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Unable to load doctor"
+        );
+      } finally {
+        setLoadingDoctor(false);
+      }
+    };
+
+    loadDoctor();
+  }, [doctorId]);
+
+  // =========================================
+  // LOAD MY APPOINTMENTS
+  // =========================================
+
+  const loadAppointments = async () => {
     try {
-      const token = localStorage.getItem("token");
+      setLoadingAppointments(true);
+
+      const token = getToken();
 
       if (!token) {
-        setError("Please login again.");
+        setError("Please login to view appointments.");
         return;
       }
 
-      setCancellingId(appointmentId);
-      setError("");
-
       const response = await fetch(
-        `https://careconnect-1-chxq.onrender.com/api/appointments/${appointmentId}/cancel`,
+        `${API_BASE_URL}/appointments/my`,
         {
-          method: "PATCH",
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -96,75 +144,214 @@ const Appointments = () => {
 
       const data = await response.json();
 
-      if (!response.ok || !data.success) {
-        setError(data.message || "Failed to cancel appointment");
-        return;
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Unable to load appointments"
+        );
       }
 
-      setAppointments((currentAppointments) =>
-        currentAppointments.map((appointment) =>
-          appointment._id === appointmentId
-            ? {
-                ...appointment,
-                status: "cancelled",
-              }
-            : appointment
-        )
+      setAppointments(data.appointments || []);
+    } catch (err) {
+      console.error("Load appointments error:", err);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to load appointments"
       );
-    } catch (error) {
-      console.error("Cancel appointment error:", error);
-      setError("Failed to connect to server");
     } finally {
-      setCancellingId(null);
+      setLoadingAppointments(false);
     }
   };
 
-  const openReschedule = (appointment: Appointment) => {
-    const currentDate = new Date(appointment.appointmentDate);
+  useEffect(() => {
+    loadAppointments();
+  }, []);
 
-    // Convert existing appointment date to datetime-local format
-    const formattedDate = new Date(
-      currentDate.getTime() - currentDate.getTimezoneOffset() * 60000
-    )
-      .toISOString()
-      .slice(0, 16);
+  // =========================================
+  // BOOK APPOINTMENT
+  // =========================================
 
-    setNewDate(formattedDate);
-    setReschedulingId(appointment._id);
+  const handleBookAppointment = async (
+    event: React.FormEvent
+  ) => {
+    event.preventDefault();
+
     setError("");
-  };
+    setSuccess("");
 
-  const handleReschedule = async () => {
-    if (!reschedulingId || !newDate) {
-      setError("Please select a new date and time.");
+    if (!doctorId) {
+      setError("Please select a doctor first.");
       return;
     }
 
-    const selectedDate = new Date(newDate);
+    if (!appointmentDate) {
+      setError("Please select appointment date and time.");
+      return;
+    }
 
-    if (selectedDate <= new Date()) {
-      setError("Please select a future date and time.");
+    const token = getToken();
+
+    if (!token) {
+      setError("Please login before booking an appointment.");
       return;
     }
 
     try {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        setError("Please login again.");
-        return;
-      }
-
-      setError("");
+      setBooking(true);
 
       const response = await fetch(
-        `https://careconnect-1-chxq.onrender.com/api/appointments/${reschedulingId}/reschedule`,
+        `${API_BASE_URL}/appointments`,
         {
-          method: "PATCH",
+          method: "POST",
+
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
+
+          body: JSON.stringify({
+            doctor: doctorId,
+            appointmentDate,
+            reason,
+          }),
+        }
+      );
+
+      /*
+       * Read response safely.
+       * If backend returns HTML instead of JSON,
+       * show a useful error instead of:
+       * Unexpected token '<'
+       */
+      const contentType =
+        response.headers.get("content-type") || "";
+
+      let data: any;
+
+      if (contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+
+        throw new Error(
+          `Server returned ${response.status}. Please check API URL: ${API_BASE_URL}`
+        );
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Unable to book appointment"
+        );
+      }
+
+      setSuccess("Appointment booked successfully!");
+
+      setAppointmentDate("");
+      setReason("");
+
+      // Refresh appointments
+      await loadAppointments();
+    } catch (err) {
+      console.error("Book appointment error:", err);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to book appointment"
+      );
+    } finally {
+      setBooking(false);
+    }
+  };
+
+  // =========================================
+  // CANCEL APPOINTMENT
+  // =========================================
+
+  const handleCancel = async (id: string) => {
+    const token = getToken();
+
+    if (!token) {
+      setError("Please login again.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Are you sure you want to cancel this appointment?"
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setError("");
+      setSuccess("");
+
+      const response = await fetch(
+        `${API_BASE_URL}/appointments/${id}/cancel`,
+        {
+          method: "PATCH",
+
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Unable to cancel appointment"
+        );
+      }
+
+      setSuccess("Appointment cancelled successfully.");
+
+      await loadAppointments();
+    } catch (err) {
+      console.error("Cancel appointment error:", err);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to cancel appointment"
+      );
+    }
+  };
+
+  // =========================================
+  // RESCHEDULE APPOINTMENT
+  // =========================================
+
+  const handleReschedule = async (id: string) => {
+    const newDate = window.prompt(
+      "Enter new appointment date and time.\nExample: 2026-08-25T15:30"
+    );
+
+    if (!newDate) return;
+
+    const token = getToken();
+
+    if (!token) {
+      setError("Please login again.");
+      return;
+    }
+
+    try {
+      setError("");
+      setSuccess("");
+
+      const response = await fetch(
+        `${API_BASE_URL}/appointments/${id}/reschedule`,
+        {
+          method: "PATCH",
+
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+
           body: JSON.stringify({
             appointmentDate: newDate,
           }),
@@ -173,253 +360,395 @@ const Appointments = () => {
 
       const data = await response.json();
 
-      if (!response.ok || !data.success) {
-        setError(data.message || "Failed to reschedule appointment");
-        return;
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Unable to reschedule appointment"
+        );
       }
 
-      setAppointments((currentAppointments) =>
-        currentAppointments.map((appointment) =>
-          appointment._id === reschedulingId
-            ? {
-                ...appointment,
-                appointmentDate: data.appointment.appointmentDate,
-              }
-            : appointment
-        )
+      setSuccess(
+        "Appointment rescheduled successfully."
       );
 
-      setReschedulingId(null);
-      setNewDate("");
+      await loadAppointments();
+    } catch (err) {
+      console.error("Reschedule appointment error:", err);
 
-      alert("Appointment rescheduled successfully!");
-    } catch (error) {
-      console.error("Reschedule appointment error:", error);
-      setError("Failed to connect to server");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to reschedule appointment"
+      );
     }
   };
 
-  return (
-    <div className="min-h-screen bg-slate-50 px-4 py-12 sm:px-6">
-      <div className="mx-auto max-w-6xl">
+  // =========================================
+  // FORMAT DATE
+  // =========================================
 
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900">
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleString();
+  };
+
+  // =========================================
+  // UI
+  // =========================================
+
+  return (
+    <section className="min-h-screen bg-slate-50 py-12">
+      <div className="mx-auto max-w-6xl px-6">
+
+        {/* PAGE HEADER */}
+
+        <div className="mb-10">
+          <h1 className="text-4xl font-bold text-slate-900">
             My Appointments
           </h1>
 
-          <p className="mt-2 text-slate-500">
+          <p className="mt-2 text-lg text-slate-500">
             Manage your upcoming and previous appointments.
           </p>
         </div>
 
-        {/* Error */}
+        {/* ERROR */}
+
         {error && (
-          <div className="mb-6 rounded-xl bg-red-50 p-5 text-red-600">
+          <div className="mb-6 rounded-xl bg-red-50 px-5 py-4 text-red-600">
             {error}
           </div>
         )}
 
-        {/* Loading */}
-        {loading && (
-          <div className="rounded-xl bg-white p-8 text-center shadow-sm">
-            <p className="text-slate-500">
-              Loading appointments...
-            </p>
+        {/* SUCCESS */}
+
+        {success && (
+          <div className="mb-6 rounded-xl bg-green-50 px-5 py-4 text-green-600">
+            {success}
           </div>
         )}
 
-        {/* Empty */}
-        {!loading && !error && appointments.length === 0 && (
-          <div className="rounded-2xl bg-white p-10 text-center shadow-sm">
-            <h2 className="text-xl font-semibold text-slate-900">
-              No appointments yet
+        {/* =====================================
+            BOOKING SECTION
+        ===================================== */}
+
+        {doctorId && (
+          <div className="mb-12 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+
+            <h2 className="text-2xl font-bold text-slate-900">
+              Book an Appointment
             </h2>
 
             <p className="mt-2 text-slate-500">
-              Book an appointment with a doctor to see it here.
+              Select your preferred date and time.
             </p>
-          </div>
-        )}
 
-        {/* Appointments */}
-        {!loading && appointments.length > 0 && (
-          <div className="grid gap-6 md:grid-cols-2">
+            {loadingDoctor ? (
+              <div className="mt-8 text-slate-500">
+                Loading doctor details...
+              </div>
+            ) : doctor ? (
+              <div className="mt-8">
 
-            {appointments.map((appointment) => (
-              <div
-                key={appointment._id}
-                className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-              >
+                {/* DOCTOR INFORMATION */}
 
-                {/* Doctor */}
-                <div className="flex items-center gap-4">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xl font-bold text-white">
-                    {appointment.doctor?.name?.charAt(0) || "D"}
+                <div className="mb-8 rounded-2xl bg-blue-50 p-6">
+
+                  <div className="flex items-center gap-5">
+
+                    {/* NO PHOTO */}
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-600 text-2xl font-bold text-white">
+                      {doctor.name.charAt(0)}
+                    </div>
+
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-900">
+                        {doctor.name}
+                      </h3>
+
+                      <p className="mt-1 text-blue-600">
+                        {doctor.specialization}
+                      </p>
+
+                      <p className="mt-1 text-sm text-slate-500">
+                        {doctor.qualification}
+                      </p>
+                    </div>
+
                   </div>
 
-                  <div className="min-w-0">
-                    <h2 className="truncate text-xl font-semibold text-slate-900">
-                      {appointment.doctor?.name}
-                    </h2>
+                  <div className="mt-5 flex flex-wrap gap-6 text-sm text-slate-600">
 
-                    <p className="text-blue-600">
-                      {appointment.doctor?.specialization}
-                    </p>
-                  </div>
-                </div>
+                    <span>
+                      Experience:{" "}
+                      <strong>
+                        {doctor.experience} Years
+                      </strong>
+                    </span>
 
-                {/* Details */}
-                <div className="mt-6 space-y-4">
-
-                  <div>
-                    <p className="text-sm text-slate-500">
-                      Appointment Date
-                    </p>
-
-                    <p className="font-medium text-slate-900">
-                      {new Date(
-                        appointment.appointmentDate
-                      ).toLocaleString()}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-slate-500">
-                      Reason for Visit
-                    </p>
-
-                    <p className="font-medium text-slate-900">
-                      {appointment.reason || "Not specified"}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-slate-500">
-                      Consultation Fee
-                    </p>
-
-                    <p className="font-medium text-slate-900">
-                      ₹{appointment.doctor?.consultationFee}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-slate-500">
-                      Status
-                    </p>
+                    <span>
+                      Consultation Fee:{" "}
+                      <strong>
+                        ₹{doctor.consultationFee}
+                      </strong>
+                    </span>
 
                     <span
-                      className={`mt-1 inline-block rounded-full px-3 py-1 text-sm font-medium capitalize ${
-                        appointment.status === "pending"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : appointment.status === "cancelled"
-                            ? "bg-red-100 text-red-700"
-                            : appointment.status === "confirmed"
-                              ? "bg-green-100 text-green-700"
-                              : "bg-blue-100 text-blue-700"
-                      }`}
+                      className={
+                        doctor.available
+                          ? "font-semibold text-green-600"
+                          : "font-semibold text-red-600"
+                      }
                     >
-                      {appointment.status}
+                      ●{" "}
+                      {doctor.available
+                        ? "Available"
+                        : "Not Available"}
                     </span>
-                  </div>
 
+                  </div>
                 </div>
 
-                {/* Actions */}
-                {appointment.status === "pending" && (
-                  <div className="mt-6 flex gap-3">
+                {/* BOOKING FORM */}
 
-                    <button
-                      onClick={() => openReschedule(appointment)}
-                      className="flex-1 rounded-lg border border-blue-600 px-4 py-3 font-medium text-blue-600 transition hover:bg-blue-50"
-                    >
-                      Reschedule
-                    </button>
+                <form
+                  onSubmit={handleBookAppointment}
+                  className="space-y-6"
+                >
 
-                    <button
-                      onClick={() => handleCancel(appointment._id)}
-                      disabled={cancellingId === appointment._id}
-                      className="flex-1 rounded-lg bg-red-500 px-4 py-3 font-medium text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {cancellingId === appointment._id
-                        ? "Cancelling..."
-                        : "Cancel"}
-                    </button>
+                  <div>
+                    <label className="mb-2 block font-semibold text-slate-700">
+                      Appointment Date & Time
+                    </label>
 
+                    <input
+                      type="datetime-local"
+                      value={appointmentDate}
+                      onChange={(event) =>
+                        setAppointmentDate(
+                          event.target.value
+                        )
+                      }
+                      min={new Date()
+                        .toISOString()
+                        .slice(0, 16)}
+                      className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    />
                   </div>
-                )}
 
-                {/* Cancelled */}
-                {appointment.status === "cancelled" && (
-                  <div className="mt-6 rounded-lg bg-red-50 px-4 py-3 text-center text-sm font-medium text-red-600">
-                    This appointment has been cancelled.
+                  <div>
+                    <label className="mb-2 block font-semibold text-slate-700">
+                      Reason for Visit
+                    </label>
+
+                    <textarea
+                      value={reason}
+                      onChange={(event) =>
+                        setReason(event.target.value)
+                      }
+                      placeholder="Tell the doctor about your problem..."
+                      rows={4}
+                      className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    />
                   </div>
-                )}
 
+                  <button
+                    type="submit"
+                    disabled={
+                      booking || !doctor.available
+                    }
+                    className="w-full rounded-xl bg-blue-600 py-4 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+                  >
+                    {booking
+                      ? "Booking..."
+                      : "Confirm Appointment"}
+                  </button>
+
+                </form>
               </div>
-            ))}
-
+            ) : (
+              !loadingDoctor && (
+                <div className="mt-8 text-red-600">
+                  Doctor not found.
+                </div>
+              )
+            )}
           </div>
         )}
 
-        {/* Reschedule Modal */}
-        {reschedulingId && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+        {/* =====================================
+            EXISTING APPOINTMENTS
+        ===================================== */}
 
-            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+        <div>
 
-              <h2 className="text-2xl font-bold text-slate-900">
-                Reschedule Appointment
-              </h2>
+          <h2 className="mb-6 text-2xl font-bold text-slate-900">
+            Your Appointments
+          </h2>
 
-              <p className="mt-2 text-slate-500">
-                Select a new date and time for your appointment.
+          {loadingAppointments ? (
+            <div className="rounded-2xl bg-white p-8 text-center text-slate-500">
+              Loading appointments...
+            </div>
+          ) : appointments.length === 0 ? (
+            <div className="rounded-2xl bg-white p-10 text-center shadow-sm">
+              <p className="text-lg text-slate-500">
+                You don't have any appointments yet.
               </p>
+            </div>
+          ) : (
+            <div className="space-y-6">
 
-              <div className="mt-6">
-                <label className="mb-2 block font-medium text-slate-700">
-                  New Date & Time
-                </label>
+              {appointments.map((appointment) => (
 
-                <input
-                  type="datetime-local"
-                  value={newDate}
-                  onChange={(e) => setNewDate(e.target.value)}
-                  min={new Date().toISOString().slice(0, 16)}
-                  className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-600"
-                />
-              </div>
-
-              <div className="mt-6 flex gap-3">
-
-                <button
-                  onClick={() => {
-                    setReschedulingId(null);
-                    setNewDate("");
-                    setError("");
-                  }}
-                  className="flex-1 rounded-lg border border-slate-300 px-4 py-3 font-medium text-slate-700 hover:bg-slate-50"
+                <div
+                  key={appointment._id}
+                  className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm"
                 >
-                  Cancel
-                </button>
 
-                <button
-                  onClick={handleReschedule}
-                  className="flex-1 rounded-lg bg-blue-600 px-4 py-3 font-medium text-white hover:bg-blue-700"
-                >
-                  Confirm
-                </button>
+                  {/* DOCTOR */}
 
-              </div>
+                  <div className="flex items-center gap-4">
+
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-xl font-bold text-white">
+                      {appointment.doctor?.name?.charAt(0) ||
+                        "D"}
+                    </div>
+
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-900">
+                        {appointment.doctor?.name ||
+                          "Doctor"}
+                      </h3>
+
+                      <p className="text-blue-600">
+                        {appointment.doctor
+                          ?.specialization ||
+                          "Specialist"}
+                      </p>
+                    </div>
+
+                  </div>
+
+                  {/* APPOINTMENT DETAILS */}
+
+                  <div className="mt-7 grid gap-5 md:grid-cols-2">
+
+                    <div>
+                      <p className="text-sm text-slate-500">
+                        Appointment Date
+                      </p>
+
+                      <p className="mt-1 font-semibold text-slate-900">
+                        {formatDate(
+                          appointment.appointmentDate
+                        )}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-sm text-slate-500">
+                        Consultation Fee
+                      </p>
+
+                      <p className="mt-1 font-semibold text-slate-900">
+                        ₹
+                        {appointment.doctor
+                          ?.consultationFee || 0}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-sm text-slate-500">
+                        Reason for Visit
+                      </p>
+
+                      <p className="mt-1 font-semibold text-slate-900">
+                        {appointment.reason ||
+                          "Not specified"}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-sm text-slate-500">
+                        Status
+                      </p>
+
+                      <span
+                        className={`mt-2 inline-block rounded-full px-4 py-1 text-sm font-semibold ${
+                          appointment.status ===
+                          "cancelled"
+                            ? "bg-red-100 text-red-600"
+                            : appointment.status ===
+                              "completed"
+                            ? "bg-green-100 text-green-600"
+                            : appointment.status ===
+                              "confirmed"
+                            ? "bg-blue-100 text-blue-600"
+                            : "bg-yellow-100 text-yellow-700"
+                        }`}
+                      >
+                        {appointment.status
+                          .charAt(0)
+                          .toUpperCase() +
+                          appointment.status.slice(1)}
+                      </span>
+                    </div>
+
+                  </div>
+
+                  {/* BUTTONS */}
+
+                  {appointment.status === "pending" && (
+                    <div className="mt-7 flex flex-wrap gap-4">
+
+                      <button
+                        onClick={() =>
+                          handleReschedule(
+                            appointment._id
+                          )
+                        }
+                        className="rounded-xl border border-blue-600 px-6 py-3 font-semibold text-blue-600 transition hover:bg-blue-50"
+                      >
+                        Reschedule
+                      </button>
+
+                      <button
+                        onClick={() =>
+                          handleCancel(
+                            appointment._id
+                          )
+                        }
+                        className="rounded-xl bg-red-500 px-6 py-3 font-semibold text-white transition hover:bg-red-600"
+                      >
+                        Cancel Appointment
+                      </button>
+
+                    </div>
+                  )}
+
+                  {appointment.status === "cancelled" && (
+                    <div className="mt-6 rounded-xl bg-red-50 p-4 text-center font-semibold text-red-600">
+                      This appointment has been
+                      cancelled.
+                    </div>
+                  )}
+
+                  {appointment.status === "completed" && (
+                    <div className="mt-6 rounded-xl bg-green-50 p-4 text-center font-semibold text-green-600">
+                      This appointment has been
+                      completed.
+                    </div>
+                  )}
+
+                </div>
+              ))}
 
             </div>
-          </div>
-        )}
+          )}
+
+        </div>
 
       </div>
-    </div>
+    </section>
   );
 };
 

@@ -1,12 +1,15 @@
+import { useNavigate } from "react-router-dom";
+
 import HeroImage from "../../components/home/HeroImage";
 import HeroSearch from "../../components/home/HeroSearch";
 import Stats from "../../components/home/Stats";
 
 const Hero = () => {
+  const navigate = useNavigate();
+
   return (
     <section className="bg-slate-50">
       <div className="mx-auto flex min-h-[90vh] max-w-7xl flex-col items-center gap-20 px-6 py-16 lg:flex-row">
-
         {/* Left Side */}
         <div className="flex-1">
           <span className="rounded-full bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-700">
@@ -27,11 +30,23 @@ const Hero = () => {
           <HeroSearch />
 
           <div className="mt-8 flex flex-wrap gap-4">
-            <button className="rounded-xl bg-blue-600 px-8 py-4 font-semibold text-white transition-all duration-300 hover:scale-105 hover:bg-blue-700">
+            {/* Book Appointment */}
+            <button
+              type="button"
+              onClick={() => navigate("/appointments")}
+              className="rounded-xl bg-blue-600 px-8 py-4 font-semibold text-white transition-all duration-300 hover:scale-105 hover:bg-blue-700"
+            >
               Book Appointment
             </button>
 
-            <button className="rounded-xl border border-slate-300 px-8 py-4 font-semibold transition-all duration-300 hover:scale-105 hover:bg-slate-100">
+            {/* Video Consultation */}
+            <button
+              type="button"
+              onClick={() => {
+                alert("Video consultation feature is coming soon.");
+              }}
+              className="rounded-xl border border-slate-300 px-8 py-4 font-semibold transition-all duration-300 hover:scale-105 hover:bg-slate-100"
+            >
               Video Consultation
             </button>
           </div>
@@ -45,7 +60,6 @@ const Hero = () => {
         <div className="flex flex-1 justify-center">
           <HeroImage />
         </div>
-
       </div>
     </section>
   );

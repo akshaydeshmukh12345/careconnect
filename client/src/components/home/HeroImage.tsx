@@ -1,4 +1,4 @@
-import heroImg from "../../assets/hero.png";
+import heroImg from "../../assets/ui/hero.png";
 import HeroCard from "./HeroCard";
 
 const HeroImage = () => {

@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+
 import Doctor from "../models/Doctor";
 import Appointment from "../models/Appointment";
 import { AuthRequest } from "../middleware/authMiddleware";
@@ -42,51 +43,62 @@ export const createDoctor = async (
   try {
     const {
       name,
+      category,
       specialization,
       experience,
       qualification,
+      languages,
       email,
       phone,
       consultationFee,
       available,
     } = req.body;
 
+    // Required fields
     if (
       !name ||
       !specialization ||
       experience === undefined ||
       !qualification ||
-      !email ||
       consultationFee === undefined
     ) {
       return res.status(400).json({
         success: false,
         message:
-          "Name, specialization, experience, qualification, email and consultation fee are required",
+          "Name, specialization, experience, qualification and consultation fee are required",
       });
     }
 
-    const existingDoctor = await Doctor.findOne({
-      email: email.toLowerCase(),
-    });
-
-    if (existingDoctor) {
-      return res.status(409).json({
-        success: false,
-        message: "Doctor already exists with this email",
+    // Check duplicate email only if email exists
+    if (email) {
+      const existingDoctor = await Doctor.findOne({
+        email: email.toLowerCase(),
       });
+
+      if (existingDoctor) {
+        return res.status(409).json({
+          success: false,
+          message: "Doctor already exists with this email",
+        });
+      }
     }
 
     const doctor = await Doctor.create({
       name,
+      category,
       specialization,
       experience,
       qualification,
-      email: email.toLowerCase(),
+      languages,
+      email: email
+        ? email.toLowerCase()
+        : undefined,
       phone,
       consultationFee,
       available:
-        available !== undefined ? available : true,
+        available !== undefined
+          ? available
+          : true,
     });
 
     return res.status(201).json({
@@ -187,9 +199,13 @@ export const getDoctorDashboard = async (
       doctor: {
         id: doctor._id,
         name: doctor.name,
-        specialization: doctor.specialization,
+        category: doctor.category,
+        specialization:
+          doctor.specialization,
         experience: doctor.experience,
-        qualification: doctor.qualification,
+        qualification:
+          doctor.qualification,
+        languages: doctor.languages,
         email: doctor.email,
         phone: doctor.phone,
         consultationFee:

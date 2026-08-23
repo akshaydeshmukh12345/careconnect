@@ -1,21 +1,34 @@
 import { Response } from "express";
+
 import Appointment from "../models/Appointment";
+
 import { AuthRequest } from "../middleware/authMiddleware";
+
+// =====================================================
+// CREATE APPOINTMENT
+// =====================================================
 
 export const createAppointment = async (
   req: AuthRequest,
   res: Response
 ) => {
   try {
-    const { doctor, appointmentDate, reason } = req.body;
+    const {
+      doctor,
+      appointmentDate,
+      reason,
+    } = req.body;
 
+    // Check required fields
     if (!doctor || !appointmentDate) {
       return res.status(400).json({
         success: false,
-        message: "Doctor and appointment date are required",
+        message:
+          "Doctor and appointment date are required",
       });
     }
 
+    // Check authentication
     if (!req.user) {
       return res.status(401).json({
         success: false,
@@ -23,20 +36,26 @@ export const createAppointment = async (
       });
     }
 
-    const appointment = await Appointment.create({
-      patient: req.user.id,
-      doctor,
-      appointmentDate,
-      reason,
-    });
+    // Create appointment
+    const appointment =
+      await Appointment.create({
+        patient: req.user.id,
+        doctor,
+        appointmentDate,
+        reason,
+      });
 
     return res.status(201).json({
       success: true,
-      message: "Appointment booked successfully",
+      message:
+        "Appointment booked successfully",
       appointment,
     });
   } catch (error) {
-    console.error("Create appointment error:", error);
+    console.error(
+      "Create appointment error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
@@ -45,11 +64,16 @@ export const createAppointment = async (
   }
 };
 
+// =====================================================
+// GET MY APPOINTMENTS
+// =====================================================
+
 export const getMyAppointments = async (
   req: AuthRequest,
   res: Response
 ) => {
   try {
+    // Check authentication
     if (!req.user) {
       return res.status(401).json({
         success: false,
@@ -57,14 +81,18 @@ export const getMyAppointments = async (
       });
     }
 
-    const appointments = await Appointment.find({
-      patient: req.user.id,
-    })
-      .populate(
-        "doctor",
-        "name specialization experience qualification consultationFee"
-      )
-      .sort({ appointmentDate: 1 });
+    // Get patient's appointments
+    const appointments =
+      await Appointment.find({
+        patient: req.user.id,
+      })
+        .populate(
+          "doctor",
+          "name specialization experience qualification consultationFee"
+        )
+        .sort({
+          appointmentDate: 1,
+        });
 
     return res.status(200).json({
       success: true,
@@ -72,7 +100,10 @@ export const getMyAppointments = async (
       appointments,
     });
   } catch (error) {
-    console.error("Get my appointments error:", error);
+    console.error(
+      "Get my appointments error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
@@ -81,11 +112,16 @@ export const getMyAppointments = async (
   }
 };
 
+// =====================================================
+// CANCEL APPOINTMENT
+// =====================================================
+
 export const cancelAppointment = async (
   req: AuthRequest,
   res: Response
 ) => {
   try {
+    // Check authentication
     if (!req.user) {
       return res.status(401).json({
         success: false,
@@ -95,11 +131,13 @@ export const cancelAppointment = async (
 
     const { id } = req.params;
 
-    // Find appointment belonging to the logged-in patient
-    const appointment = await Appointment.findOne({
-      _id: id,
-      patient: req.user.id,
-    });
+    // Find appointment belonging
+    // to logged-in patient
+    const appointment =
+      await Appointment.findOne({
+        _id: id,
+        patient: req.user.id,
+      });
 
     if (!appointment) {
       return res.status(404).json({
@@ -108,11 +146,13 @@ export const cancelAppointment = async (
       });
     }
 
-    // Only pending appointments can be cancelled
+    // Only pending appointments
+    // can be cancelled
     if (appointment.status !== "pending") {
       return res.status(400).json({
         success: false,
-        message: `Appointment cannot be cancelled because it is already ${appointment.status}`,
+        message:
+          `Appointment cannot be cancelled because it is already ${appointment.status}`,
       });
     }
 
@@ -123,11 +163,15 @@ export const cancelAppointment = async (
 
     return res.status(200).json({
       success: true,
-      message: "Appointment cancelled successfully",
+      message:
+        "Appointment cancelled successfully",
       appointment,
     });
   } catch (error) {
-    console.error("Cancel appointment error:", error);
+    console.error(
+      "Cancel appointment error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
@@ -136,11 +180,16 @@ export const cancelAppointment = async (
   }
 };
 
+// =====================================================
+// RESCHEDULE APPOINTMENT
+// =====================================================
+
 export const rescheduleAppointment = async (
   req: AuthRequest,
   res: Response
 ) => {
   try {
+    // Check authentication
     if (!req.user) {
       return res.status(401).json({
         success: false,
@@ -149,35 +198,49 @@ export const rescheduleAppointment = async (
     }
 
     const { id } = req.params;
-    const { appointmentDate } = req.body;
 
+    const {
+      appointmentDate,
+    } = req.body;
+
+    // Check date
     if (!appointmentDate) {
       return res.status(400).json({
         success: false,
-        message: "New appointment date is required",
+        message:
+          "New appointment date is required",
       });
     }
 
-    const newDate = new Date(appointmentDate);
+    // Convert date
+    const newDate =
+      new Date(appointmentDate);
 
-    if (Number.isNaN(newDate.getTime())) {
+    // Validate date
+    if (
+      Number.isNaN(newDate.getTime())
+    ) {
       return res.status(400).json({
         success: false,
         message: "Invalid appointment date",
       });
     }
 
+    // Date must be in future
     if (newDate <= new Date()) {
       return res.status(400).json({
         success: false,
-        message: "Appointment date must be in the future",
+        message:
+          "Appointment date must be in the future",
       });
     }
 
-    const appointment = await Appointment.findOne({
-      _id: id,
-      patient: req.user.id,
-    });
+    // Find appointment
+    const appointment =
+      await Appointment.findOne({
+        _id: id,
+        patient: req.user.id,
+      });
 
     if (!appointment) {
       return res.status(404).json({
@@ -186,27 +249,117 @@ export const rescheduleAppointment = async (
       });
     }
 
+    // Cancelled/completed appointments
+    // cannot be rescheduled
     if (
       appointment.status === "cancelled" ||
       appointment.status === "completed"
     ) {
       return res.status(400).json({
         success: false,
-        message: `Appointment cannot be rescheduled because it is ${appointment.status}`,
+        message:
+          `Appointment cannot be rescheduled because it is ${appointment.status}`,
       });
     }
 
-    appointment.appointmentDate = newDate;
+    // Update appointment date
+    appointment.appointmentDate =
+      newDate;
 
     await appointment.save();
 
     return res.status(200).json({
       success: true,
-      message: "Appointment rescheduled successfully",
+      message:
+        "Appointment rescheduled successfully",
       appointment,
     });
   } catch (error) {
-    console.error("Reschedule appointment error:", error);
+    console.error(
+      "Reschedule appointment error:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
+// =====================================================
+// UPDATE APPOINTMENT STATUS
+// =====================================================
+// Doctor can change appointment status:
+// pending
+// confirmed
+// cancelled
+// completed
+// =====================================================
+
+export const updateAppointmentStatus = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    // Check authentication
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
+    const { id } = req.params;
+
+    const { status } = req.body;
+
+    // Allowed statuses
+    const allowedStatuses = [
+      "pending",
+      "confirmed",
+      "cancelled",
+      "completed",
+    ];
+
+    // Validate status
+    if (
+      !allowedStatuses.includes(status)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Invalid status. Allowed values: pending, confirmed, cancelled, completed",
+      });
+    }
+
+    // Find appointment
+    const appointment =
+      await Appointment.findById(id);
+
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: "Appointment not found",
+      });
+    }
+
+    // Update status
+    appointment.status = status;
+
+    await appointment.save();
+
+    return res.status(200).json({
+      success: true,
+      message:
+        `Appointment ${status} successfully`,
+      appointment,
+    });
+  } catch (error) {
+    console.error(
+      "Update appointment status error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
