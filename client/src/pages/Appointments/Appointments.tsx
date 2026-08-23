@@ -87,9 +87,7 @@ const Appointments = () => {
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(
-            data.message || "Unable to load doctors"
-          );
+          throw new Error(data.message || "Unable to load doctors");
         }
 
         const foundDoctor = data.doctors?.find(
@@ -106,9 +104,7 @@ const Appointments = () => {
         console.error("Load doctor error:", err);
 
         setError(
-          err instanceof Error
-            ? err.message
-            : "Unable to load doctor"
+          err instanceof Error ? err.message : "Unable to load doctor"
         );
       } finally {
         setLoadingDoctor(false);
@@ -224,6 +220,7 @@ const Appointments = () => {
        * show a useful error instead of:
        * Unexpected token '<'
        */
+
       const contentType =
         response.headers.get("content-type") || "";
 
@@ -232,8 +229,6 @@ const Appointments = () => {
       if (contentType.includes("application/json")) {
         data = await response.json();
       } else {
-        const text = await response.text();
-
         throw new Error(
           `Server returned ${response.status}. Please check API URL: ${API_BASE_URL}`
         );
@@ -455,6 +450,7 @@ const Appointments = () => {
                   <div className="flex items-center gap-5">
 
                     {/* NO PHOTO */}
+
                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-600 text-2xl font-bold text-white">
                       {doctor.name.charAt(0)}
                     </div>
@@ -571,6 +567,7 @@ const Appointments = () => {
                 </div>
               )
             )}
+
           </div>
         )}
 
